@@ -6,6 +6,10 @@ A Chrome extension for monitoring and debugging postMessage communication across
 
 PostMessage Monitor helps developers and security researchers inspect all postMessage events on a page, track message listeners, and detect communication patterns between frames. It provides real-time visibility into cross-origin messaging that is otherwise difficult to debug.
 
+![Front page](pics/pic1.png)
+![Messages page](pics/pic2.png)
+
+![Console logging](pics/console.png)
 ## Key Features
 
 - **Real-time Monitoring**: Captures all postMessage communications across frames and windows
