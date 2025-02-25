@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>PostMessage Monitor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      width: 400px;
+      margin: 0;
+      padding: 16px;
+    }
+    
+    h1 {
+      font-size: 18px;
+      margin-top: 0;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+    
+    .count-badge {
+      background-color: #cc0000;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 12px;
+      font-weight: bold;
+    }
+    
+    .toggle-container {
+      display: flex;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .toggle-switch {
+      position: relative;
+      display: inline-block;
+      width: 46px;
+      height: 20px;
+      margin-right: 8px;
+    }
+    
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .toggle-slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 34px;
+    }
+    
+    .toggle-slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+    
+    input:checked + .toggle-slider {
+      background-color: #2196F3;
+    }
+    
+    input:checked + .toggle-slider:before {
+      transform: translateX(26px);
+    }
+    
+    .frames-container {
+      max-height: 300px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+    }
+    
+    .frame-info {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .frame-info:last-child {
+      border-bottom: none;
+    }
+    
+    .frame-path {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+    
+    .frame-url {
+      color: #666;
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 4px;
+    }
+    
+    .listener-count {
+      font-size: 12px;
+    }
+    
+    .listener-item {
+      padding: 4px 4px 4px 12px;
+      border-top: 1px dotted #eee;
+      font-size: 11px;
+      margin-top: 4px;
+    }
+    
+    .listener-type {
+      display: inline-block;
+      padding: 2px 4px;
+      border-radius: 3px;
+      background-color: #f0f0f0;
+      margin-right: 4px;
+    }
+    
+    .wrapper-type {
+      color: #e91e63;
+      font-weight: bold;
+    }
+    
+    .no-frames {
+      padding: 16px;
+      text-align: center;
+      color: #666;
+    }
+    
+    .instructions {
+      margin-top: 16px;
+      font-size: 12px;
+      color: #666;
+      border-top: 1px solid #eee;
+      padding-top: 16px;
+    }
+    
+    .tabs {
+      display: flex;
+      margin-bottom: 10px;
+    }
+    
+    .tab {
+      padding: 8px 12px;
+      cursor: pointer;
+      border: 1px solid #ddd;
+      border-bottom: none;
+      border-radius: 4px 4px 0 0;
+      background-color: #f5f5f5;
+      margin-right: 4px;
+    }
+    
+    .tab.active {
+      background-color: #fff;
+      border-bottom: 1px solid #fff;
+      margin-bottom: -1px;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .tab-content {
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    .button {
+      background-color: #4CAF50;
+      border: none;
+      color: white;
+      padding: 8px 12px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 12px;
+      margin: 4px 2px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+    
+    .button.secondary {
+      background-color: #2196F3;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>PostMessage Monitor</h1>
+    <div class="count-badge" id="totalCount">0</div>
+  </div>
+  
+  <div class="tabs">
+    <div class="tab active" data-tab="listeners">Listeners</div>
+    <div class="tab" data-tab="messages">Messages</div>
+    <div class="tab" data-tab="settings">Settings</div>
+  </div>
+  
+  <div class="tab-content active" id="listeners-tab">
+    <div class="toggle-container">
+      <label class="toggle-switch">
+        <input type="checkbox" id="loggingToggle">
+        <span class="toggle-slider"></span>
+      </label>
+      <span>Enable Browser Console Logging <span style="font-size:10px;color:#666">(messages are always captured in Messages tab)</span></span>
+    </div>
+    
+    <div class="frames-container" id="framesContainer">
+      <div class="no-frames">No frames detected</div>
+    </div>
+  </div>
+  
+  <div class="tab-content" id="messages-tab">
+    <div class="toggle-container">
+      <label class="toggle-switch">
+        <input type="checkbox" id="autoUpdateToggle" checked>
+        <span class="toggle-slider"></span>
+      </label>
+      <span>Auto-update</span>
+      <button id="clearMessagesBtn" class="button secondary" style="margin-left: auto;">Clear</button>
+    </div>
+    
+    <div class="frames-container" id="messagesContainer">
+      <div class="no-frames">No messages captured yet. Enable logging to start capturing.</div>
+    </div>
+  </div>
+  
+  <div class="tab-content" id="settings-tab">
+    <h3>Unwrapper Settings</h3>
+    <p>The extension automatically unwraps the following wrapper libraries:</p>
+    <ul>
+      <li>Raven/Sentry</li>
+      <li>New Relic</li>
+      <li>Rollbar</li>
+      <li>Bugsnag</li>
+      <li>jQuery</li>
+    </ul>
+    
+    <div class="toggle-container">
+      <label class="toggle-switch">
+        <input type="checkbox" id="enhanceConsoleToggle" checked>
+        <span class="toggle-slider"></span>
+      </label>
+      <span>Enhance console.log for MessageEvents</span>
+    </div>
+    
+    <div class="toggle-container">
+      <label class="toggle-switch">
+        <input type="checkbox" id="reroute-messages" checked>
+        <span class="toggle-slider"></span>
+      </label>
+      <span>Reroute wrapped messages to unwrapped handlers</span>
+    </div>
+    
+    <button id="testPostMessageBtn" class="button">Test postMessage</button>
+  </div>
+  
+  <div class="instructions">
+    <p>Open the browser console (F12) to see detailed logs when logging is enabled.</p>
+    <p>The badge shows the total number of postMessage listeners across all frames.</p>
+  </div>
+  
+  <script src="popup.js"></script>
+</body>
+</html>
