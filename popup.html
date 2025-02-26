@@ -9,8 +9,8 @@
       width: 400px;
       margin: 0;
       padding: 16px;
-    }
     
+    }
     h1 {
       font-size: 18px;
       margin-top: 0;
@@ -199,6 +199,92 @@
     .button.secondary {
       background-color: #2196F3;
     }
+    
+    /* Expandable content styles */
+    .expandable-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      padding: 3px;
+      border-radius: 3px;
+      margin: 2px 0;
+    }
+    
+    .expandable-header:hover {
+      background-color: #f0f0f0;
+    }
+    
+    .expand-icon {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      background-color: #ddd;
+      color: #333;
+      text-align: center;
+      line-height: 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 12px;
+      margin-right: 4px;
+      user-select: none;
+      vertical-align: middle;
+    }
+    
+    .expand-icon:hover {
+      background-color: #2196F3;
+      color: white;
+    }
+    
+    .expandable-content {
+      display: none;
+      margin-top: 4px;
+      padding: 6px;
+      background-color: #f9f9f9;
+      border-radius: 4px;
+      border: 1px solid #eee;
+      max-height: 300px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      font-family: monospace;
+      font-size: 10px;
+    }
+    
+    .expandable-content.visible {
+      display: block;
+    }
+    
+    .message-data {
+      font-family: monospace;
+      font-size: 10px;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+    
+    .message-row {
+      margin: 4px 0;
+    }
+    
+    .message-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .code-block {
+      font-family: monospace;
+      white-space: pre-wrap;
+      word-break: break-all;
+      max-height: 150px;
+      overflow-y: auto;
+      background-color: #f5f5f5;
+      padding: 4px;
+      border-radius: 2px;
+      font-size: 10px;
+      margin-top: 4px;
+    }
   </style>
 </head>
 <body>
@@ -238,7 +324,7 @@
     </div>
     
     <div class="frames-container" id="messagesContainer">
-      <div class="no-frames">No messages captured yet. Enable logging to start capturing.</div>
+      <div class="no-frames">No messages captured yet. Messages are always captured regardless of console logging setting.</div>
     </div>
   </div>
   
@@ -275,6 +361,7 @@
   <div class="instructions">
     <p>Open the browser console (F12) to see detailed logs when logging is enabled.</p>
     <p>The badge shows the total number of postMessage listeners across all frames.</p>
+    <p>Click the <span class="expand-icon">+</span> icon to expand messages and listener details.</p>
   </div>
   
   <script src="popup.js"></script>

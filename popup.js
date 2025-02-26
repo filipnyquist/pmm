@@ -1,3 +1,4 @@
+// popup.js
 document.addEventListener('DOMContentLoaded', function () {
     const totalCountElement = document.getElementById('totalCount');
     const framesContainer = document.getElementById('framesContainer');
@@ -78,48 +79,94 @@ document.addEventListener('DOMContentLoaded', function () {
             const frameElement = document.createElement('div');
             frameElement.className = 'frame-info';
 
-            let listenersHtml = '';
+            let frameHTML = `
+          <div class="frame-path">${frame.path}</div>
+          <div class="frame-url">${frame.url}</div>
+          <div class="listener-count">
+            ${frame.listeners.length} postMessage listener${frame.listeners.length !== 1 ? 's' : ''}
+          </div>
+        `;
+
             if (frame.listeners && frame.listeners.length > 0) {
-                frame.listeners.forEach(listener => {
+                frame.listeners.forEach((listener, idx) => {
                     // Check if this is a wrapped listener
                     const isWrapped = listener.isUnwrapped;
                     const wrapperType = isWrapped ? (listener.wrapperType || 'Unknown') : '';
 
-                    listenersHtml += `
+                    // Create unique ID for expandable section
+                    const listenerId = `listener-${frameId}-${idx}`;
+
+                    // Create the listener item HTML
+                    frameHTML += `
               <div class="listener-item">
-                ${isWrapped ?
+                <div class="expandable-header" data-target="${listenerId}">
+                  <div>
+                    <span class="expand-icon">+</span>
+                    ${isWrapped ?
                             `<span class="wrapper-type">${wrapperType}</span> wrapped listener` :
                             'Direct listener'}
-                <div style="color: #666; margin-top: 2px;">
-                  ${listener.unwrapped ?
-                            truncateCode(listener.unwrapped.code || "function() {...}") :
-                            truncateCode(listener.wrapped ? listener.wrapped.code : "function() {...}")}
+                  </div>
+                  <span style="color:#999;font-size:10px;">${listener.unwrapped.location}</span>
+                </div>
+                <div class="expandable-content" id="${listenerId}">
+            `;
+
+                    // Add function code details
+                    if (isWrapped) {
+                        const wrappedCode = listener.wrapped.code || "function() {...}";
+                        const unwrappedCode = listener.unwrapped.code || "function() {...}";
+
+                        frameHTML += `
+                <div>
+                  <strong>Original wrapper:</strong>
+                  <div class="code-block">${escapeHTML(wrappedCode)}</div>
+                </div>
+                <div style="margin-top:8px;">
+                  <strong>Unwrapped function:</strong>
+                  <div class="code-block">${escapeHTML(unwrappedCode)}</div>
+                </div>
+              `;
+                    } else {
+                        const functionCode = listener.wrapped.code || "function() {...}";
+                        frameHTML += `
+                <div>
+                  <strong>Function:</strong>
+                  <div class="code-block">${escapeHTML(functionCode)}</div>
+                </div>
+              `;
+                    }
+
+                    // Add metadata
+                    frameHTML += `
+                  <div style="margin-top:8px;">
+                    <strong>Location:</strong> ${listener.unwrapped.location}<br>
+                    <strong>Added at:</strong> ${new Date(listener.timestamp).toLocaleTimeString()}
+                  </div>
                 </div>
               </div>
             `;
                 });
             }
 
-            frameElement.innerHTML = `
-          <div class="frame-path">${frame.path}</div>
-          <div class="frame-url">${frame.url}</div>
-          <div class="listener-count">
-            ${frame.listeners.length} postMessage listener${frame.listeners.length !== 1 ? 's' : ''}
-          </div>
-          ${listenersHtml}
-        `;
-
+            frameElement.innerHTML = frameHTML;
             framesContainer.appendChild(frameElement);
         });
+
+        // Add event listeners to expandable sections
+        setTimeout(() => {
+            setupExpandables();
+        }, 0);
     }
 
-    // Helper function to truncate code
-    function truncateCode(code) {
-        if (!code) return '';
-        if (code.length > 100) {
-            return code.substring(0, 100) + '...';
-        }
-        return code;
+    // Function to escape HTML to prevent XSS when displaying code
+    function escapeHTML(str) {
+        if (!str) return '';
+        return str
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
     // Function to update message display
@@ -136,7 +183,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         messagesContainer.innerHTML = '';
 
-        capturedMessages.forEach(message => {
+        capturedMessages.forEach((message, idx) => {
             const messageElement = document.createElement('div');
             messageElement.className = 'frame-info';
 
@@ -149,39 +196,115 @@ document.addEventListener('DOMContentLoaded', function () {
             const icon = isOutgoing ? '→' : '←';
             const color = isOutgoing ? '#1976d2' : '#43a047';
 
+            // Create a unique ID for this message's expandable content
+            const messageId = `message-${idx}-content`;
+
             // Check if this is a simplified message (non-serializable original)
             const isSimplified = message.data && message.data.__simplified;
 
-            // Format message data
-            let dataDisplay = '';
+            // Format message data preview (truncated)
+            let dataPreview = '';
+            let fullData = '';
+
             try {
                 if (isSimplified) {
-                    dataDisplay = `[${message.data.type}] ${message.data.toString}${message.data.keys ? ' Keys: ' + message.data.keys.join(', ') : ''}`;
+                    dataPreview = `[${message.data.type}] ${message.data.toString.substring(0, 50)}${message.data.toString.length > 50 ? '...' : ''}`;
+                    fullData = `[${message.data.type}] ${message.data.toString}${message.data.keys ? '\nKeys: ' + message.data.keys.join(', ') : ''}`;
                 } else {
-                    dataDisplay = JSON.stringify(message.data).substring(0, 100);
-                    if (JSON.stringify(message.data).length > 100) {
-                        dataDisplay += '...';
-                    }
+                    const stringified = JSON.stringify(message.data, null, 2);
+                    dataPreview = stringified.length > 50 ? stringified.substring(0, 50) + '...' : stringified;
+                    fullData = stringified;
                 }
             } catch (e) {
-                dataDisplay = '[Complex Data]';
+                dataPreview = '[Complex Data]';
+                fullData = '[Cannot stringify data: ' + e.message + ']';
             }
 
             messageElement.innerHTML = `
-          <div style="display: flex; justify-content: space-between;">
+          <div class="message-header">
             <div style="font-weight: bold; color: ${color};">
               ${icon} ${isOutgoing ? 'Sent to' : 'Received from'} ${isOutgoing ? message.target : message.source}
             </div>
             <div style="color: #666; font-size: 11px;">${timeString}</div>
           </div>
-          <div style="margin: 4px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-            Data: ${dataDisplay}
+          
+          <div class="expandable-header" data-target="${messageId}">
+            <div>
+              <span class="expand-icon">+</span>
+              <span>Data: ${escapeHTML(dataPreview)}</span>
+            </div>
           </div>
-          <div style="font-size: 11px; color: #666;">${isOutgoing ? 'From' : 'To'}: ${isOutgoing ? message.source : message.target}</div>
-          ${message.path ? `<div style="font-size: 11px; color: #0d47a1; margin-top: 2px;">Path: ${message.path}</div>` : ''}
+          
+          <div class="expandable-content" id="${messageId}">
+            <div class="message-data">${escapeHTML(fullData)}</div>
+            <div class="message-row" style="margin-top:8px;">
+              <strong>${isOutgoing ? 'From' : 'To'}:</strong> ${isOutgoing ? message.source : message.target}
+            </div>
+            ${message.path ? `
+            <div class="message-row">
+              <strong>Path:</strong> ${message.path}
+            </div>` : ''}
+            <div class="message-row">
+              <strong>Timestamp:</strong> ${date.toLocaleString()}
+            </div>
+          </div>
         `;
 
             messagesContainer.appendChild(messageElement);
+        });
+
+        // Setup expandable sections after adding all elements to DOM
+        setTimeout(() => {
+            setupExpandables();
+        }, 0);
+    }
+
+    // Function to set up expandable sections
+    function setupExpandables() {
+        // Remove any existing event listeners first to prevent duplicates
+        document.querySelectorAll('.expandable-header').forEach(header => {
+            // Clone the node to remove event listeners
+            const newHeader = header.cloneNode(true);
+            header.parentNode.replaceChild(newHeader, header);
+
+            // Add event listener to the new header
+            newHeader.addEventListener('click', function (e) {
+                const targetId = this.getAttribute('data-target');
+                const content = document.getElementById(targetId);
+
+                if (content) {
+                    // Toggle visibility
+                    content.classList.toggle('visible');
+
+                    // Update the expand icon
+                    const icon = this.querySelector('.expand-icon');
+                    if (icon) {
+                        icon.textContent = content.classList.contains('visible') ? '−' : '+';
+                    }
+                }
+
+                // Prevent event bubbling to avoid issues with nested expandables
+                e.stopPropagation();
+            });
+        });
+
+        // Also make the expand icons clickable separately
+        document.querySelectorAll('.expand-icon').forEach(icon => {
+            // Clone and replace to remove existing listeners
+            const newIcon = icon.cloneNode(true);
+            icon.parentNode.replaceChild(newIcon, icon);
+
+            newIcon.addEventListener('click', function (e) {
+                // Find the parent header
+                const header = this.closest('.expandable-header');
+                if (header) {
+                    // Trigger the header's click event
+                    header.click();
+                }
+
+                // Prevent event bubbling
+                e.stopPropagation();
+            });
         });
     }
 
